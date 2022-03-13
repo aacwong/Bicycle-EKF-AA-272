@@ -158,7 +158,7 @@ classdef MeasurementModel < handle
         function R = R_meas(X,meas)
             % returns the covariance matrix of a particular measurement
             if strcmp(meas.type,'wheelspeed')
-                R = .01; 
+                R = .4; 
             elseif strcmp(meas.type,'gnss')
                 % estimated value gnss log
                 sigma = [25,30]'.*meas.sigma;

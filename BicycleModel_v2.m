@@ -16,18 +16,20 @@ classdef BicycleModel_v2 < handle
         l1 = 0.355; % (m) long. dist from CoM to rear wheel contact patch
         l2 = 0.686; % (m) long. dist from CoM to front wheel contact patch
         l = BicycleModel_v2.l1+BicycleModel_v2.l2;
-        m = 70; % (kg) mass 
+        m = 65; % (kg) mass 
         r_w = 0.683/2; % (m) radius of rear wheel
-        CdA = 0*0.34; % average from  https://link.springer.com/article/10.1007/s12283-017-0234-1
+        %r_w = 0.65/2; % (m) radius of rear wheel, velocity matched with wls
+        CdA = 0.34; % average from  https://link.springer.com/article/10.1007/s12283-017-0234-1
         rho = 1.225; % kg/m^3 density of air
+        v_thresh = 1; % velocity threshold for stand still / low speed dynamics
     end
     methods(Static)
 
         function X_k1 = f_dyn(X_k,u_k,dt)
             % linearized dynamics at given state 
             X_k1 = X_k + dt*BicycleModel_v2.f_dyn_nonlinear(X_k,u_k);
-            % wrap theta
-            %X_k1(4) = wrapToPi(X_k1(4));
+            % disable v_u
+            X_k1(6) = 0;
         end
 
         function X_dot = f_dyn_nonlinear(X,u)
@@ -53,7 +55,10 @@ classdef BicycleModel_v2 < handle
             X_ecef_dot = R_enu' * V_enu;
 
             theta_dot = v_en*tan(psi)/l;
-
+            if abs(v_en)<BicycleModel_v2.v_thresh
+                CdA = 0;
+                X_ecef_dot = z_vec(3);
+            end
             ven_dot = 1/m*(F-0.5*CdA*rho*v_en^2*sign(v_en));
             b_clk_dot = b_dot;
             b_clk_dot = 0;
@@ -90,6 +95,11 @@ classdef BicycleModel_v2 < handle
             p_pz = z_vec(8);
             p_pth = [ R_enu'*[-v_en*sin(theta);v_en*cos(theta); v_u]; z_vec(5)];
             p_pven = [ R_enu'*[cos(theta);sin(theta);0]; tan(psi)/l; CdA*rho/m*v_en*sign(v_en); z_vec(3)];
+            if abs(v_en)<BicycleModel_v2.v_thresh
+                p_pven(1:3) = z_vec(3);
+                p_pven(4) = 0;
+                p_pven(5) = 0;
+            end
             p_pvu = [R_enu'*[0;0;1]; z_vec(5)];
             %%%%%%%%%%%%%%%
             p_pvu = [R_enu'*[0;0;0]; z_vec(5)];
@@ -130,13 +140,13 @@ classdef BicycleModel_v2 < handle
             v_en = X(5);
 
             Q_process = diag([zeros(1,3),... % assigned later
-                    .4^2,... % theta
-                    .5,... % ven
-                    .5,... % vu
-                    1, ... % clock bias
-                    5, ... % clock bias rate
+                    .2^2,... % theta
+                    .25^2,... % ven
+                    .00^2,... % vu
+                    .4^2, ... % clock bias
+                    .5^2, ... % clock bias rate
                     ])*dt;
-            Q_process(1:3,1:3) = BicycleModel_v2.R_enu(X(1:3))'*diag([1.5^2,1.5^2,1^2]*dt) * R_enu(X(1:3));
+            Q_process(1:3,1:3) = BicycleModel_v2.R_enu(X(1:3))'*diag([.25^2,.25^2,.75^2]*dt) * BicycleModel_v2.R_enu(X(1:3));
 
 
             Q = Q_process;%+ B*diag([s_sq_psi,s_sq_F])*B';
