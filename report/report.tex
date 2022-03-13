@@ -1,0 +1,138 @@
+\documentclass[letterpaper,times]{IONconf}
+\nonstopmode
+%
+% If IONconf.cls has not been installed into the LaTeX system files,
+% manually specify the path as follows or keep a copy in the same 
+% folder as the document itself:
+% \documentclass{../sty/IONconf}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Common packages to import
+
+% ### MATH PACKAGE
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}
+
+% ### CITATION PACKAGE
+\usepackage{cite}
+
+
+
+\usepackage[pdftex]{graphicx}
+% to ensure centered multiline captions, the centering package should 
+% be called as well.
+\usepackage[justification=centering]{caption}
+% To use the subfigures command, the subcaption package should be 
+% called as well.
+\usepackage{subcaption}
+\graphicspath{{figs/}}
+% To declare their extensions so you won't have to specify these with
+% every instance of \includegraphics:
+\DeclareGraphicsExtensions{.pdf,.jpeg,.png}
+
+
+\usepackage{array}
+% ### URL PACKAGE
+\usepackage{url}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Document starts here
+
+\title{Bicycle State Estimation with Extended Kalman Filter, GNSS and Wheel Speed Sensor Fusion}
+
+% Authors are grouped by institution. Institution names are italicized.
+% Author groups are separated by '\vspace{1mm} \\' for a line 
+% break with proper spacing.
+% This template shows an example of three authors, where author 1 and 
+% author 2 are from the same institution:
+
+\author{
+    Aaron~Wong, \textit{Stanford University}% <- this '%' removes a trailing whitespace
+    }
+
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+\section{Related Work}
+
+\section{Problem Statement}
+
+\section{Approach}
+
+\subsection{Dynamics Model}
+
+\begin{align*}
+    \vec{X} =& \begin{bmatrix}
+        x, y, z, \theta , v_x,v_y, \omega_w , b_u
+    \end{bmatrix}^T\\
+    \vec{u} =& \begin{bmatrix}
+        \psi, \tau 
+    \end{bmatrix}^T
+\end{align*}
+
+\begin{align*}
+    \dot{x} &= v_x\\
+    \dot{y} &= v_y\\
+    \dot{\theta } &= V \tan{\psi}\\
+    \dot{v_x} &= \dot{v}\cos{\theta} - v \sin{\theta} \dot{\theta}\\
+    \dot{v_y} &= \dot{v}\sin{\theta} + v\cos{\theta} \dot{\theta}\\
+    \dot{\omega_w} &= \frac{ 1}{I_w }(\tau - \dot{v}mr_w)\\
+    \dot{b_u} &= 0
+\end{align*}
+
+\begin{align*}
+    v &= \sqrt{ v_x^2 + v_y^2}\\
+    s &= \frac{ r \omega_w-v}{v }\\
+    \mu &= \mu(s)\\
+    \dot{v} &= \frac{ \mu g l_1}{l_1+l_2 }\\
+\end{align*}
+
+\begin{align*}
+    \psi &\sim \mathcal{N}\left(0,\left(\frac{ \alpha }{v }\right)^2\right)\\
+    \tau &\sim \mathcal{N}\left(0,\left(\sigma_\tau \right)^2\right)\\
+\end{align*}
+
+\begin{align*}
+    \vec{f}(x_k) &= \vec{X}_{k} + \Delta t \dot{\vec{X}}|_{x_k,u_k=0}\\
+    F_k &= \left. \frac{ \partial\vec{f}}{\partial \vec{X}}\right\vert_{\vec{X_{k}}} = I + \Delta t \left.\frac{ \partial \dot{\vec{X}}}{\partial \vec{X} }\right\vert_{\vec{X_k}}\\
+    %
+    B_k &= \left. \frac{ \partial\vec{f}}{\partial \vec{u}}\right\vert_{\vec{X_{k}}} = \Delta t \left.\frac{ \partial \dot{\vec{X}}}{\partial \vec{u} }\right\vert_{\vec{X_k}}
+\end{align*}
+
+\begin{align*}
+    h_ \omega(\vec{X}) &= \omega \\
+    h^i_ \rho(\vec{X}) &= \sqrt{ (x^i-x)^2 + (y^i-y)^2 + (z^i-z)^2} + b_u - B^i\\
+    h^i_ {\dot{\rho}}(\vec{X}) &= (\vec{v}^i-\vec{v})^T \vec{1}^i + \dot{b}_u - \dot{B}^i
+\end{align*}
+
+\begin{align*}
+    Q_k &= Q_{process} + B_k Q_{u} B_k^T
+\end{align*}
+
+\begin{align*}
+    \hat{\vec{X}}_{k+1} &= \vec{f}(X_k) \\
+    \hat{P}_{k+1} &= F_k P_k F_k^T + Q_k\\
+\end{align*}
+\begin{align*}
+    \vec{\nu}_k &= \vec{z}_k - h(\hat{\vec{X}}_k) \\
+    S_k &= H_k \hat{P}_{k+1} H_k^T + R_k\\
+    K_k &= \hat{P}_{k+1} H_k^T S_k^{-1}\\
+    \vec{X}_{k+1} &= \hat{\vec{X}}_{k+1} + K_k \vec{\nu}\\
+    {P}_{k+1} &= (I-K_k H_k)\hat{P}_{k+1}
+\end{align*}
+
+\section{Results}
+
+\section{Conclusion}
+
+\section{Future Directions}
+% the IEEE bibliography style matches the ION bibliography style guidelines.
+\bibliographystyle{IEEEtran}
+%\bibliography{my_bibliography_file}
+
+\end{document}
