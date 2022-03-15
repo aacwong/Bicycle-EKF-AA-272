@@ -32,7 +32,11 @@ classdef MeasurementModel < handle
         % returns predicted measurement of type given state and measurement model params
             if strcmp(meas.type,'wheelspeed')
                 if MeasurementModel.motion_model==2
-                    h = abs(X(5))/BicycleModel_v2.r_w ; 
+                    if abs(X(5)) < BicycleModel_v2.v_thresh
+                        h = 0;
+                    else
+                        h = abs(X(5))/BicycleModel_v2.r_w ; 
+                    end
                     % wheel speed measurements are always positive
                 else
                     h = X(7);
@@ -77,7 +81,9 @@ classdef MeasurementModel < handle
             if strcmp(meas.type,'wheelspeed')
                 if MeasurementModel.motion_model==2
                     H = zeros(1,8);
-                    H(5) = sign(X(5))*1/BicycleModel_v2.r_w;
+                    %if abs(X(5))>=BicycleModel_v2.v_thresh
+                        H(5) = sign(X(5))*1/BicycleModel_v2.r_w;
+                    %end
                     % wheel speed is always nonzero, so have to account for sign flip
                 else
                     H = zeros(1,8);
@@ -119,6 +125,16 @@ classdef MeasurementModel < handle
                         prho_dot_pxyz(i,:) = (v_rel(:,i)'*pe_pxyz);
                     end
                     prho_dot_pven = (-R_enu*e)'*[cos(theta);sin(theta);0];
+                    %if abs(v_en)<BicycleModel_v2.v_thresh
+                    %    %prho_dot_pven = 0*prho_dot_pven;
+                    %else
+                    %    v_e = v_en*cos(theta); v_n = v_en*sin(theta);
+                    %    dve_dven = 1/cos(theta);dvn_dven = 1/sin(theta);
+                    %    if isinf(dve_dven); dve_dven = 0;end
+                    %    if isinf(dvn_dven); dvn_dven = 0;end
+                    %    prho_dot_pven = (R_enu*e)' * [dve_dven;dvn_dven;0];
+                    %end
+                    %prho_dot_pven = (-R_enu*e)'*[cos(theta);sin(theta);0];
                     prho_dot_pvu = (-R_enu*e)' *[0;0;1];
                     prho_dot_pth = (-R_enu*e)' *[-v_en*sin(theta);v_en*sin(theta);0];
                 else
@@ -158,12 +174,11 @@ classdef MeasurementModel < handle
         function R = R_meas(X,meas)
             % returns the covariance matrix of a particular measurement
             if strcmp(meas.type,'wheelspeed')
-                R = .4; 
+                R = 30; 
             elseif strcmp(meas.type,'gnss')
                 % estimated value gnss log
-                sigma = [25,30]'.*meas.sigma;
-                %sigma = meas.sigma;
-                R = diag(reshape(sigma',[],1));
+                sigma_sq = [35,30]'.*meas.sigma;
+                R = diag(reshape(sigma_sq',[],1));
             end
         end
     end         

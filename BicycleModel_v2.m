@@ -30,6 +30,12 @@ classdef BicycleModel_v2 < handle
             X_k1 = X_k + dt*BicycleModel_v2.f_dyn_nonlinear(X_k,u_k);
             % disable v_u
             X_k1(6) = 0;
+            % wrap theta and keep velocity positive
+            %if X_k1(5)<0
+            %    X_k1(5) = -X_k1(5);
+            %    X_k1(4) = X_k1(4)+pi;
+            %end
+            %X_k1(4) = wrapToPi(X_k1(4));
         end
 
         function X_dot = f_dyn_nonlinear(X,u)
@@ -140,13 +146,15 @@ classdef BicycleModel_v2 < handle
             v_en = X(5);
 
             Q_process = diag([zeros(1,3),... % assigned later
-                    .2^2,... % theta
-                    .25^2,... % ven
-                    .00^2,... % vu
-                    .4^2, ... % clock bias
-                    .5^2, ... % clock bias rate
-                    ])*dt;
-            Q_process(1:3,1:3) = BicycleModel_v2.R_enu(X(1:3))'*diag([.25^2,.25^2,.75^2]*dt) * BicycleModel_v2.R_enu(X(1:3));
+                    ... .2^2,... % theta
+                    .3,... % theta
+                    ... .25^2,... % ven
+                    .25,... % ven
+                    .00,... % vu
+                    .1, ... % clock bias
+                    .5, ... % clock bias rate
+                    ].^2)*dt;
+            Q_process(1:3,1:3) = BicycleModel_v2.R_enu(X(1:3))'*diag([.75,.75,.1].^2*dt) * BicycleModel_v2.R_enu(X(1:3));
 
 
             Q = Q_process;%+ B*diag([s_sq_psi,s_sq_F])*B';

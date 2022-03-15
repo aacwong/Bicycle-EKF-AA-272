@@ -1,0 +1,23 @@
+[0] Config.pm:304> INFO - This is Biber 2.14 (beta)
+[0] Config.pm:307> INFO - Logfile is 'report.blg'
+[61] biber:322> INFO - === Mon Mar 14, 2022, 18:24:14
+[72] Biber.pm:415> INFO - Reading 'report.bcf'
+[125] Biber.pm:943> INFO - Found 5 citekeys in bib section 0
+[136] Biber.pm:4256> INFO - Processing section 0
+[136] Utils.pm:75> INFO - Globbing data source 'bib.bib'
+[136] Utils.pm:91> INFO - Globbed data source 'bib.bib' to bib.bib
+[144] Biber.pm:4455> INFO - Looking for bibtex format file 'bib.bib' for section 0
+[145] bibtex.pm:1653> INFO - LaTeX decoding ...
+[152] bibtex.pm:1471> INFO - Found BibTeX data source 'bib.bib'
+[190] Utils.pm:293> WARN - BibTeX subsystem: /tmp/biber_tmp_RSSO/bib.bib_36346.utf8, line 2, warning: 1 characters of junk seen at toplevel
+[190] Utils.pm:293> WARN - BibTeX subsystem: /tmp/biber_tmp_RSSO/bib.bib_36346.utf8, line 5, warning: 1 characters of junk seen at toplevel
+[190] Utils.pm:293> WARN - BibTeX subsystem: /tmp/biber_tmp_RSSO/bib.bib_36346.utf8, line 8, warning: 1 characters of junk seen at toplevel
+[190] Utils.pm:293> WARN - BibTeX subsystem: /tmp/biber_tmp_RSSO/bib.bib_36346.utf8, line 21, warning: 1 characters of junk seen at toplevel
+[190] Utils.pm:293> WARN - BibTeX subsystem: /tmp/biber_tmp_RSSO/bib.bib_36346.utf8, line 34, warning: 1 characters of junk seen at toplevel
+[199] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[199] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[199] Biber.pm:4084> INFO - Sorting list 'none/global//global/global' of type 'entry' with template 'none' and locale 'en-US'
+[199] Biber.pm:4090> INFO - No sort tailoring available for locale 'en-US'
+[205] bbl.pm:652> INFO - Writing 'report.bbl' with encoding 'UTF-8'
+[208] bbl.pm:755> INFO - Output to report.bbl
+[208] Biber.pm:128> INFO - WARNINGS: 5

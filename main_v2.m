@@ -1,6 +1,6 @@
 clear
 addpath gps-measurement-tools/opensource/
-load_save = false
+load_save = false;
 set(groot,'defaultAxesXGrid','on')
 set(groot,'defaultAxesYGrid','on')
 
@@ -45,9 +45,10 @@ else
         gnss_measurements.timestamp(1)]);
     gnss_t_offset = t0-gnss_measurements.timestamp(1);
     tf = t0+600*5;
+    % exp: 
+    %wheelspeed_measurements.timestamp = wheelspeed_measurements.timestamp+gnss_t_offset;
     tf = min([wheelspeed_measurements.timestamp(end),
         gnss_measurements.timestamp(end)]);
-
 
     [X_hat,P_hat,t_vec,meas_innovs] = simulate(X0,P0,dt,t0,tf,wheelspeed_measurements,gnss_measurements);
 end
@@ -57,7 +58,11 @@ innovs = plot_innovations(meas_innovs);
 check_consistency(innovs);
 
 
-[X,P,t] = condense(X_hat,P_hat,t_vec); % this does nothing now
+X = X_hat;
+P = P_hat;
+t = t_vec;
+%[X,P,t] = condense(X_hat,P_hat,t_vec); % this does nothing now
+
 plot_states(t,X,P);
 
 
@@ -102,8 +107,8 @@ X = X-X(:,1);
 
 %return
 % calibration of wheel speed?
-%wls_vel_interp = interp1(wls_pvt.FctSeconds,vecnorm(wls_vel),(0:1:(tf-t0)) + wls_pvt.FctSeconds(1),'spline');
-%whl_interp = interp1(wheelspeed_measurements.timestamp,wheelspeed_measurements.omega,t0:1:tf,'spline');
+wls_vel_interp = interp1(wls_pvt.FctSeconds,vecnorm(wls_vel),(0:1:(tf-t0)) + wls_pvt.FctSeconds(1)+gnss_t_offset,'spline');
+whl_interp = interp1(wheelspeed_measurements.timestamp,wheelspeed_measurements.omega,t0:1:tf,'spline');
 %figure(10); clf; hold on;
 %plot(whl_interp*BicycleModel_v2.r_w,wls_vel_interp,'.');
 %plot(0:10,0:10,'LineWidth',2);
@@ -141,6 +146,17 @@ plot(t,sqrt(squeeze(P(2,2,1:end))),'.','DisplayName','\sigma y')
 plot(t,sqrt(squeeze(P(3,3,:))),'.','DisplayName','\sigma z')
 title('X,Y,Z standard deviations'); ylabel('(m)'); 
 legend
+mean_sigma = @(i) mean(sqrt(squeeze(P(i,i,:))));
+prc = @(i,p) prctile(sqrt(squeeze(P(i,i,:))),p);
+
+fprintf('sigma x: 50pctile: %.2f, 95pctile: %.2f m \n',prc(1,50),prc(1,95));
+fprintf('sigma y: 50pctile: %.2f, 95pctile: %.2f m \n',prc(2,50),prc(2,95));
+fprintf('sigma z: 50pctile: %.2f, 95pctile: %.2f m \n',prc(3,50),prc(3,95));
+fprintf('sigma th: 50pctile: %.2f, 95pctile: %.2f rad \n',prc(4,50),prc(4,95));
+fprintf('sigma v_en: 50pctile: %.2f, 95pctile: %.2f m/s \n',prc(5,50),prc(5,95));
+fprintf('sigma b_u: 50pctile: %.2f, 95pctile: %.2f m \n',prc(7,50),prc(7,95));
+fprintf('sigma b_dot: 50pctile: %.2f, 95pctile: %.2f m/s \n',prc(8,50),prc(8,95));
+
 
 ax(end+1)=subplot(4,2,[3,4]); hold on;
 plot(t,sqrt(squeeze(P(4,4,:))),'.','DisplayName','\sigma \theta')
@@ -325,7 +341,9 @@ function [X_hat_sim,P_hat_sim,t_vec,innov_cov] = ...
 
     % X0 is the state estimate
     % X0_hat is the intermediate estimate before measurement
-
+    
+    % elevation mask in degrees
+    el_mask = gnss_meas.sv_el>10;
     ts_wheel = wheelspeed_meas.timestamp;
     ts_wheel = ts_wheel(ts_wheel>=t0);
     idx_wheel = min(find(ts_wheel>=t0));
@@ -360,8 +378,8 @@ function [X_hat_sim,P_hat_sim,t_vec,innov_cov] = ...
             % update
             [X0,P0,i_cov] = ekf_update(X0_hat,P0_hat,meas,dt,t-t0);
             innov_cov{end+1} = {i_cov};
-        % for estimation without wheel speed 
-        X0 = X0_hat; P0 = P0_hat;
+        % exp: for estimation without wheel speed 
+        %X0 = X0_hat; P0 = P0_hat;
         % advance time
         idx_wheel = idx_wheel+1;
         t = t+dt_wheel;
@@ -372,8 +390,9 @@ function [X_hat_sim,P_hat_sim,t_vec,innov_cov] = ...
         % pack measurement % batch measurements together
         idxs = abs(gnss_meas.timestamp - t+dt_gnss)<.1;
 
+        % exp: 
         % elevation mask
-        %idxs = idxs .* gnss_meas.sv_el>10;
+        %idxs = idxs & el_mask;
         
         %% filter by Cn0
         %Cn0_min = 25;
@@ -385,8 +404,6 @@ function [X_hat_sim,P_hat_sim,t_vec,innov_cov] = ...
             gnss_meas.pseudorange_rate_sigma(idxs)];
         meas = struct('type','gnss','z',z,...
             'sigma',sigma,...
-            ...%'sigma',[gnss_meas.pseudorange_sigma(idx_gnss);...
-            ...%    gnss_meas.pseudorange_rate_sigma(idx_gnss)],...
             'sv_pos',gnss_meas.sv_pos_ecef(:,idxs),...
             'sv_vel',gnss_meas.sv_vel_ecef(:,idxs),...
             'sv_B',gnss_meas.sv_clock_err_(idxs),... %lol
@@ -401,6 +418,7 @@ function [X_hat_sim,P_hat_sim,t_vec,innov_cov] = ...
     idx_gnss = idx_gnss+sum(idxs);
     t = t+dt_gnss;
 end
+%keyboard
 X_hat_sim(:,end+1) = X0;
 P_hat_sim(:,:,end+1) = P0;
 t_vec(end+1) = t;
@@ -443,6 +461,7 @@ function [] = check_consistency(innovs)
     plot(t_gnss-t_start,nis_rho,'.')
     plot(t_gnss-t_start,chi2inv(.99,nis_gnss_dof),'--')
     title('nis pseudorange')
+    legend('NIS','99% \chi^2 test')
     ax(end+1) = subplot(3,1,2); hold on;
     plot(t_gnss-t_start,nis_rhor,'.')
     plot(t_gnss-t_start,chi2inv(.99,nis_gnss_dof),'--')
@@ -464,14 +483,19 @@ end
 
 function plot_states(t,X,P)
     labels={'X','Y','Z','theta','V_en','V_u','b','b dot'};
+    ylabels={'m','m','m','rad','m/s','m/s','m','m/s'};
     figure(5); clf;
     ax = [];
     for i=1:8
+        if i==6
+            continue
+        end
         ax(end+1) = subplot(4,2,i);  hold on;
         plot(t-t(1),X(i,:)-X(i,1),'.');
         plot(t-t(1),3*sqrt(squeeze(P(i,i,:)))' + X(i,:)-X(i,1),'.');
         plot(t-t(1),-3*sqrt(squeeze(P(i,i,:)))' + X(i,:)-X(i,1),'.');
         title(labels{i})
+        ylabel(ylabels{i})
     end
     legend('estimate','+3 \sigma ','-3 \sigma')
     linkaxes(ax,'x');
@@ -494,7 +518,7 @@ function [X,P,innov] = ekf_update(X_hat,P_hat,meas,dt,t)
         tof_old = zeros(size(meas.sv_id));
         meas.tof = zeros(size(meas.sv_id));
 
-        while (dtof) > 1e-4
+        while (dtof) > 1e-8
             [X,P,innov] = ekf_update_step(X_hat,P_hat,meas,dt,t);
             pos = X(1:3);
 
@@ -507,7 +531,6 @@ function [X,P,innov] = ekf_update(X_hat,P_hat,meas,dt,t)
 end
 
 function [X,P,innov] = ekf_update_step(X_hat,P_hat,meas,dt,t)
-    %%X = X_hat; P = P_hat; return
     z = meas.z;
     y_tilde = z-MeasurementModel.h_meas(X_hat,meas);
     H = MeasurementModel.H_jac(X_hat,meas);
@@ -517,25 +540,38 @@ function [X,P,innov] = ekf_update_step(X_hat,P_hat,meas,dt,t)
     i_kept = [];
     innov = {y_tilde,innov_cov,meas};
     n_prev = length(y_tilde);
+    % exp: 
     % not filter if few measurements or within 1 minute of starting
-    while (i<=length(y_tilde)) && (length(y_tilde)>4) && t > 60
+    %while (i<=length(y_tilde)) && (length(y_tilde)>4) && t > 60
+    while (i<=length(y_tilde)) &&  t > 60
         if abs(y_tilde(i))>15*sqrt(R(i,i))
+        %if abs(y_tilde(i))>30*sqrt(R(i,i))
             i_kept(end+1) = 0;
+            % exp: disable filter
             y_tilde(i) = [];
             R(i,:) = []; R(:,i) = [];
             H(i,:) = []; 
+            %i = i+1;
         else
             i_kept(end+1) = 1;
             i = i+1;
         end
     end
     innov{end+1} = i_kept;
-    if n_prev>length(y_tilde)
+    if n_prev-length(y_tilde) > 5
         fprintf('removed %i meas\n',n_prev-length(y_tilde))
     end
     %innov = {y_tilde,innov_cov,meas};
     K = P_hat*H'*(R+H*P_hat*H')^-1;
     X = X_hat+K*y_tilde;
+
+    %if (t>1300); keyboard; end
+
+    %X(4) = wrapToPi(X(4));
+    %        if X(5)<0
+    %            X(5) = -X(5);
+    %            X(4) = X(4)+pi;
+    %        end
     P = (eye(size(P_hat)) - K*H)*P_hat;
 end
 
